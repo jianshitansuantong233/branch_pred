@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <map>
+#include <math.h> 
 using namespace std;
 
 #include "utils.h"
 #include "bt9_reader.h"
-#include "Pickle-in-Cpp/pickle.h"
+// #include "Pickle-in-Cpp/pickle.h"
 #define SAVE_CSV 1
 // #define SAVE_PKL 1
 struct BinDataPoint {
@@ -20,6 +21,16 @@ struct BinDataPoint {
     UINT64 branchTarget;
     UINT64 PC;
 };
+
+string getLSB(UINT64 PC, int digits){
+    string res="";
+    uint16_t lsb = PC >> 3;
+    for(int i=0;i<digits;i++){
+        res = to_string(1 & lsb) + "," + res;
+        lsb = lsb >> 1;
+    }
+    return res;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -36,18 +47,18 @@ int main(int argc, char *argv[]) {
     std::string key = "total_instruction_count:";
     std::string value;
     bt9_reader.header.getFieldValueStr(key, value);
-    UINT64 total_instruction_counter = std::stoull(value, nullptr, 0);
+    // UINT64 total_instruction_counter = std::stoull(value, nullptr, 0);
     key = "branch_instruction_count:";
     bt9_reader.header.getFieldValueStr(key, value);
-    UINT64 branch_instruction_counter = std::stoull(value, nullptr, 0);
-    UINT64 numMispred = 0;
+    // UINT64 branch_instruction_counter = std::stoull(value, nullptr, 0);
+    // UINT64 numMispred = 0;
 
-    OpType opType; // didn't use, may be added?
+    // OpType opType; // didn't use, may be added?
     UINT64 PC;
     bool branchTaken;
     UINT64 branchTarget;
-    UINT64 nbr_instr_count;
-    UINT64 obs_trav_count;
+    // UINT64 nbr_instr_count;
+    // UINT64 obs_trav_count;
     UINT64 numIter = 0;
     std::map<UINT64, vector<int>> history;
 
@@ -55,18 +66,19 @@ int main(int argc, char *argv[]) {
     std::ofstream csvFile;
     csvFile.open("/CBP-16-Simulation/cbp2016.eval/parsed_traces/"+trace_path + std::to_string(numIter) + ".csv");
 
-    csvFile << "PC,branchTaken,branchTarget,history1,history2,history3\n";
+    // csvFile << "PC,branchTaken,branchTarget,history1,history2,history3\n";
 #endif
 
 #ifdef SAVE_PKL
 #endif
     for (auto it = bt9_reader.begin(); it!=bt9_reader.end(); ++it) {
-        if(numIter%1024==0){
+        if(numIter%1024==0 && numIter!=0){
 #ifdef SAVE_CSV
+
             csvFile.close();
             csvFile.open("/CBP-16-Simulation/cbp2016.eval/parsed_traces/"+trace_path + std::to_string(int(numIter/1024)) + ".csv");
 
-            csvFile << "PC,branchTaken,branchTarget,history1,history2,history3\n";
+            // csvFile << "PC,branchTaken,branchTarget,history1,history2,history3\n";
 #endif
         }
         PC = it->getSrcNode()->brVirtualAddr();
@@ -75,9 +87,9 @@ int main(int argc, char *argv[]) {
         branchTaken = it->getEdge()->isTakenPath();
         numIter++;
 #ifdef SAVE_CSV
-        csvFile << std::to_string(PC) + ","
+        csvFile << getLSB(PC, 16)
             << std::to_string(branchTaken) + ","
-            << std::to_string(branchTarget) + ",";
+            << getLSB(branchTarget, 16);
 #endif  
 #ifdef SAVE_PKL
 #endif
